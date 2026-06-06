@@ -24,6 +24,7 @@ import {
   makeThumbnail,
   type LoadedImage,
 } from "@/utils/image";
+import { buildPdfFilename } from "@/utils/filename";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { PagePreview } from "@/components/PagePreview";
 import { ProgressDialog } from "@/components/ProgressDialog";
@@ -185,7 +186,7 @@ export default function Home() {
           setDone(doneCount);
         },
       });
-      downloadBlob(blob, "coupon-book.pdf");
+      downloadBlob(blob, buildPdfFilename(config));
     } catch (e) {
       if (!(e instanceof DOMException && e.name === "AbortError")) {
         setImageError(e instanceof Error ? e.message : "PDF generation failed.");
