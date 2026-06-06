@@ -1,12 +1,14 @@
 "use client";
 
+import { RotateCcw } from "lucide-react";
 import type { CouponConfig } from "@/lib/types";
 import type { FieldErrors } from "@/lib/validate";
 import type { LoadedImage } from "@/utils/image";
+import type { RecentImage } from "@/lib/recent-images";
 import { Card, SectionHeading } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { SliderField } from "@/components/ui/slider";
-import { ImageDropzone } from "@/components/ImageDropzone";
+import { ImageDropzone, type ImageSelectHandler } from "@/components/ImageDropzone";
 
 /** Numeric input that emits NaN for empty/invalid so validation can flag it. */
 function NumberInput({
@@ -45,14 +47,22 @@ export function SettingsPanel({
   onImageClear,
   imageError,
   errors,
+  recents,
+  onPickRecent,
+  onRemoveRecent,
+  onResetOverlay,
 }: {
   config: CouponConfig;
   onChange: <K extends keyof CouponConfig>(key: K, value: CouponConfig[K]) => void;
   image: LoadedImage | null;
-  onImageSelect: (file: File) => void;
+  onImageSelect: ImageSelectHandler;
   onImageClear: () => void;
   imageError: string | null;
   errors: FieldErrors;
+  recents: RecentImage[];
+  onPickRecent: (id: string) => void;
+  onRemoveRecent: (id: string) => void;
+  onResetOverlay: () => void;
 }) {
   return (
     <div className="space-y-5">
@@ -65,6 +75,9 @@ export function SettingsPanel({
             onSelect={onImageSelect}
             onClear={onImageClear}
             error={imageError}
+            recents={recents}
+            onPickRecent={onPickRecent}
+            onRemoveRecent={onRemoveRecent}
           />
         </div>
       </Card>
@@ -139,10 +152,19 @@ export function SettingsPanel({
 
       {/* 4 — Number overlay */}
       <Card className="p-5">
-        <SectionHeading index="4" title="Number on coupon" />
+        <SectionHeading index="4" title="Number on coupon">
+          <button
+            type="button"
+            onClick={onResetOverlay}
+            className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft transition-colors hover:text-stamp"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </button>
+        </SectionHeading>
         <p className="mt-1.5 font-mono text-[11px] leading-snug text-ink-faint">
-          The image keeps its uploaded quality — adjust only the number. Tip: drag
-          the number on the preview to position it.
+          Set the number&apos;s size, position, and rotation. Drag the number on the
+          preview to place it — the artwork stays exactly as you uploaded it.
         </p>
         <div className="mt-5 space-y-6">
           <SliderField

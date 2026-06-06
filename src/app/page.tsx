@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileDown, Loader2, ScrollText } from "lucide-react";
 import { DEFAULT_CONFIG, type CouponConfig } from "@/lib/types";
 import { validateConfig, isValid } from "@/lib/validate";
@@ -8,13 +8,38 @@ import { prepareBaseImage } from "@/lib/coupon-renderer";
 import { computeLayout } from "@/lib/layout";
 import { generatePdf } from "@/lib/pdf-generator";
 import { firstCode, lastCode } from "@/lib/number-generator";
-import { loadImageFromFile, downloadBlob, type LoadedImage } from "@/utils/image";
+import {
+  loadConfig,
+  saveConfig,
+  loadPresets,
+  savePresets,
+  newId,
+  type Preset,
+} from "@/lib/storage";
+import {
+  listRecent,
+  addRecent,
+  removeRecent,
+  resolveRecent,
+  tryAutoRestore,
+  recentImagesSupported,
+  type RecentImage,
+} from "@/lib/recent-images";
+import {
+  loadImageFromFile,
+  downloadBlob,
+  makeThumbnail,
+  type LoadedImage,
+} from "@/utils/image";
 import { formatPattern } from "@/utils/formatNumber";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { PresetBar } from "@/components/PresetBar";
 import { CouponPreview } from "@/components/CouponPreview";
 import { PagePreview } from "@/components/PagePreview";
 import { ProgressDialog } from "@/components/ProgressDialog";
 import { Button } from "@/components/ui/button";
+
+const OVERLAY_KEYS = ["fontScale", "posX", "posY", "rotation"] as const;
 
 export default function Home() {
   const [config, setConfig] = useState<CouponConfig>(DEFAULT_CONFIG);
@@ -26,8 +51,49 @@ export default function Home() {
   const [done, setDone] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [recents, setRecents] = useState<RecentImage[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
   const errors = useMemo(() => validateConfig(config), [config]);
   const configValid = isValid(errors);
+
+  const refreshRecents = useCallback(async () => {
+    setRecents(await listRecent());
+  }, []);
+
+  const setImageFromFile = useCallback(async (file: File): Promise<LoadedImage | null> => {
+    const loaded = await loadImageFromFile(file);
+    setImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.objectUrl);
+      return loaded;
+    });
+    return loaded;
+  }, []);
+
+  // On first mount: restore the saved config, presets, and recent images, and
+  // silently re-open the last image if it's still available (no permission prompt).
+  useEffect(() => {
+    const saved = loadConfig();
+    if (saved) setConfig(saved);
+    setPresets(loadPresets());
+    setHydrated(true);
+
+    void refreshRecents();
+    void (async () => {
+      try {
+        const file = await tryAutoRestore();
+        if (file) await setImageFromFile(file);
+      } catch {
+        /* ignore — user can pick from recents */
+      }
+    })();
+  }, [refreshRecents, setImageFromFile]);
+
+  // Persist config whenever it changes (after the initial hydration read).
+  useEffect(() => {
+    if (hydrated) saveConfig(config);
+  }, [config, hydrated]);
 
   // Cache the source image at native resolution; rebuild only when it changes.
   const base = useMemo(() => {
@@ -56,18 +122,48 @@ export default function Home() {
     [],
   );
 
-  const onImageSelect = useCallback(async (file: File) => {
-    setImageError(null);
-    try {
-      const loaded = await loadImageFromFile(file);
-      setImage((prev) => {
-        if (prev) URL.revokeObjectURL(prev.objectUrl);
-        return loaded;
-      });
-    } catch (e) {
-      setImageError(e instanceof Error ? e.message : "Could not load image.");
-    }
-  }, []);
+  const onImageSelect = useCallback(
+    async (file: File, handle?: FileSystemFileHandle) => {
+      setImageError(null);
+      try {
+        const loaded = await setImageFromFile(file);
+        // Remember it (with a thumbnail) when we have a persistable handle.
+        if (loaded && handle && recentImagesSupported()) {
+          await addRecent(handle, file, makeThumbnail(loaded.element));
+          await refreshRecents();
+        }
+      } catch (e) {
+        setImageError(e instanceof Error ? e.message : "Could not load image.");
+      }
+    },
+    [setImageFromFile, refreshRecents],
+  );
+
+  const onPickRecent = useCallback(
+    async (id: string) => {
+      setImageError(null);
+      try {
+        const file = await resolveRecent(id);
+        if (file) {
+          await setImageFromFile(file);
+        } else {
+          setImageError("That image is no longer available — it was removed.");
+        }
+      } catch {
+        setImageError("Could not reopen that image.");
+      }
+      await refreshRecents();
+    },
+    [setImageFromFile, refreshRecents],
+  );
+
+  const onRemoveRecent = useCallback(
+    async (id: string) => {
+      await removeRecent(id);
+      await refreshRecents();
+    },
+    [refreshRecents],
+  );
 
   const onImageClear = useCallback(() => {
     setImage((prev) => {
@@ -75,6 +171,41 @@ export default function Home() {
       return null;
     });
     setImageError(null);
+  }, []);
+
+  const onResetOverlay = useCallback(() => {
+    setConfig((prev) => {
+      const next = { ...prev };
+      for (const key of OVERLAY_KEYS) next[key] = DEFAULT_CONFIG[key];
+      return next;
+    });
+  }, []);
+
+  const onSavePreset = useCallback(
+    (name: string) => {
+      setPresets((prev) => {
+        const next = [...prev, { id: newId(), name, config }];
+        savePresets(next);
+        return next;
+      });
+    },
+    [config],
+  );
+
+  const onApplyPreset = useCallback(
+    (id: string) => {
+      const preset = presets.find((p) => p.id === id);
+      if (preset) setConfig(preset.config);
+    },
+    [presets],
+  );
+
+  const onDeletePreset = useCallback((id: string) => {
+    setPresets((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      savePresets(next);
+      return next;
+    });
   }, []);
 
   const canGenerate = configValid && !!image && !!base && !generating;
@@ -146,7 +277,13 @@ export default function Home() {
 
       <main className="grid grid-cols-1 gap-6 py-7 lg:grid-cols-12">
         {/* Settings */}
-        <section className="lg:col-span-5 lg:col-start-1">
+        <section className="space-y-5 lg:col-span-5 lg:col-start-1">
+          <PresetBar
+            presets={presets}
+            onApply={onApplyPreset}
+            onSave={onSavePreset}
+            onDelete={onDeletePreset}
+          />
           <SettingsPanel
             config={config}
             onChange={onChange}
@@ -155,6 +292,10 @@ export default function Home() {
             onImageClear={onImageClear}
             imageError={imageError}
             errors={errors}
+            recents={recents}
+            onPickRecent={onPickRecent}
+            onRemoveRecent={onRemoveRecent}
+            onResetOverlay={onResetOverlay}
           />
         </section>
 

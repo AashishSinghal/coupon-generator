@@ -46,6 +46,59 @@ export function loadImageFromFile(file: File): Promise<LoadedImage> {
   });
 }
 
+/** A small JPEG data-URL thumbnail of a loaded image, for the recents strip. */
+export function makeThumbnail(img: HTMLImageElement, max = 160): string {
+  const w = img.naturalWidth || img.width || 1;
+  const h = img.naturalHeight || img.height || 1;
+  const scale = Math.min(1, max / Math.max(w, h));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.7);
+}
+
+interface FilePickerWindow {
+  showOpenFilePicker?: (options?: {
+    multiple?: boolean;
+    types?: { description?: string; accept: Record<string, string[]> }[];
+  }) => Promise<FileSystemFileHandle[]>;
+}
+
+/**
+ * Open the native file picker via the File System Access API, returning both
+ * the File and its persistable handle. Returns null if the user cancels or the
+ * API is unavailable (callers should fall back to a plain file input).
+ */
+export async function pickImageFile(): Promise<{
+  file: File;
+  handle: FileSystemFileHandle;
+} | null> {
+  const picker = (window as unknown as FilePickerWindow).showOpenFilePicker;
+  if (!picker) return null;
+  try {
+    const [handle] = await picker({
+      multiple: false,
+      types: [
+        {
+          description: "Images",
+          accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] },
+        },
+      ],
+    });
+    if (!handle) return null;
+    const file = await handle.getFile();
+    return { file, handle };
+  } catch {
+    // AbortError (user cancelled) or unsupported — treat as no selection.
+    return null;
+  }
+}
+
 /** Trigger a browser download for a Blob under the given filename. */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
