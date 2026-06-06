@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Coupon Generator — "press / ticket-stub" aesthetic.
+  Warm paper, ink black, a single vermilion stamp accent. Monospace for the
+  numeric/coupon-code language of the tool; a characterful grotesque for display.
+*/
+@theme {
+  --color-paper: #f6f2e9;
+  --color-paper-deep: #efe9dc;
+  --color-card: #fffdf8;
+  --color-ink: #1b1916;
+  --color-ink-soft: #6f6759;
+  --color-ink-faint: #a89f8d;
+  --color-line: #e2dac9;
+  --color-line-strong: #cfc5b0;
+  --color-stamp: #d6442d;
+  --color-stamp-deep: #b9351f;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --radius: 0.5rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  /* Subtle paper grain. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--color-stamp);
+  color: #fff;
+}
+
+/* Perforated ticket edge used on preview cards. */
+.perforated {
+  background-image: radial-gradient(circle, transparent 0 3px, var(--color-card) 3px);
+  background-size: 12px 12px;
+  background-position: -6px 0;
+}
+
+/* Numeric field arrows are noise in a layout tool. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Themed range slider. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  border: 2px solid var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-ink);
+  transition: transform 0.12s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  border: 2px solid var(--color-card);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
