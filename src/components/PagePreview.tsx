@@ -5,6 +5,7 @@ import type { CouponConfig } from "@/lib/types";
 import { type BaseImage, renderCoupon } from "@/lib/coupon-renderer";
 import { computeLayout, cellPosition, indexToCell, type PageLayout } from "@/lib/layout";
 import { formatPattern } from "@/utils/formatNumber";
+import { cn } from "@/lib/utils";
 
 /** Cap live-rendered cells so an extreme grid can't lock the preview. */
 const MAX_RENDERED_CELLS = 120;
@@ -17,9 +18,11 @@ const MAX_RENDERED_CELLS = 120;
 export function PagePreview({
   base,
   config,
+  className,
 }: {
   base: BaseImage;
   config: CouponConfig;
+  className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -34,8 +37,6 @@ export function PagePreview({
 
     host.width = Math.round(layout.pageWidth * scale);
     host.height = Math.round(layout.pageHeight * scale);
-    host.style.width = "100%";
-    host.style.height = "auto";
 
     const ctx = host.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
@@ -74,7 +75,7 @@ export function PagePreview({
   return (
     <canvas
       ref={canvasRef}
-      className="block w-full rounded-md border border-line shadow-sm"
+      className={cn("block rounded-md border border-line bg-white shadow-sm", className)}
       aria-label="Preview of the first PDF page"
     />
   );

@@ -65,9 +65,9 @@ export function SettingsPanel({
   onResetOverlay: () => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 lg:columns-2 lg:gap-4 lg:space-y-0">
       {/* 1 — Coupon image */}
-      <Card className="p-5">
+      <Card className="mb-4 break-inside-avoid p-4 lg:mb-4">
         <SectionHeading index="1" title="Coupon image" />
         <div className="mt-4">
           <ImageDropzone
@@ -83,7 +83,7 @@ export function SettingsPanel({
       </Card>
 
       {/* 2 — Numbering */}
-      <Card className="p-5">
+      <Card className="mb-4 break-inside-avoid p-4 lg:mb-4">
         <SectionHeading index="2" title="Numbering" />
         <div className="mt-4 space-y-4">
           <Field
@@ -126,7 +126,7 @@ export function SettingsPanel({
       </Card>
 
       {/* 3 — Page layout */}
-      <Card className="p-5">
+      <Card className="mb-4 break-inside-avoid p-4 lg:mb-4">
         <SectionHeading index="3" title="Page layout" />
         <div className="mt-4 grid grid-cols-2 gap-3">
           <Field label="Rows per page" htmlFor="rows" error={errors.rows}>
@@ -151,7 +151,7 @@ export function SettingsPanel({
       </Card>
 
       {/* 4 — Number overlay */}
-      <Card className="p-5">
+      <Card className="mb-4 break-inside-avoid p-4 lg:mb-4">
         <SectionHeading index="4" title="Number on coupon">
           <button
             type="button"
@@ -166,7 +166,7 @@ export function SettingsPanel({
           Set the number&apos;s size, position, and rotation. Drag the number on the
           preview to place it — the artwork stays exactly as you uploaded it.
         </p>
-        <div className="mt-5 space-y-6">
+        <div className="mt-4 space-y-5">
           <SliderField
             id="size"
             label="Size"

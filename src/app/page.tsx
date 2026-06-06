@@ -8,14 +8,7 @@ import { prepareBaseImage } from "@/lib/coupon-renderer";
 import { computeLayout } from "@/lib/layout";
 import { generatePdf } from "@/lib/pdf-generator";
 import { firstCode, lastCode } from "@/lib/number-generator";
-import {
-  loadConfig,
-  saveConfig,
-  loadPresets,
-  savePresets,
-  newId,
-  type Preset,
-} from "@/lib/storage";
+import { loadConfig, saveConfig } from "@/lib/storage";
 import {
   listRecent,
   addRecent,
@@ -31,10 +24,7 @@ import {
   makeThumbnail,
   type LoadedImage,
 } from "@/utils/image";
-import { formatPattern } from "@/utils/formatNumber";
 import { SettingsPanel } from "@/components/SettingsPanel";
-import { PresetBar } from "@/components/PresetBar";
-import { CouponPreview } from "@/components/CouponPreview";
 import { PagePreview } from "@/components/PagePreview";
 import { ProgressDialog } from "@/components/ProgressDialog";
 import { Button } from "@/components/ui/button";
@@ -51,7 +41,6 @@ export default function Home() {
   const [done, setDone] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
-  const [presets, setPresets] = useState<Preset[]>([]);
   const [recents, setRecents] = useState<RecentImage[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
@@ -76,7 +65,6 @@ export default function Home() {
   useEffect(() => {
     const saved = loadConfig();
     if (saved) setConfig(saved);
-    setPresets(loadPresets());
     setHydrated(true);
 
     void refreshRecents();
@@ -105,15 +93,6 @@ export default function Home() {
     () => (image ? computeLayout(config, image.width, image.height) : null),
     [image, config],
   );
-
-  const previewCode = useMemo(() => {
-    if (errors.pattern) return null;
-    try {
-      return formatPattern(config.pattern, config.startNumber || 0);
-    } catch {
-      return null;
-    }
-  }, [config.pattern, config.startNumber, errors.pattern]);
 
   const onChange = useCallback(
     <K extends keyof CouponConfig>(key: K, value: CouponConfig[K]) => {
@@ -181,33 +160,6 @@ export default function Home() {
     });
   }, []);
 
-  const onSavePreset = useCallback(
-    (name: string) => {
-      setPresets((prev) => {
-        const next = [...prev, { id: newId(), name, config }];
-        savePresets(next);
-        return next;
-      });
-    },
-    [config],
-  );
-
-  const onApplyPreset = useCallback(
-    (id: string) => {
-      const preset = presets.find((p) => p.id === id);
-      if (preset) setConfig(preset.config);
-    },
-    [presets],
-  );
-
-  const onDeletePreset = useCallback((id: string) => {
-    setPresets((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-      savePresets(next);
-      return next;
-    });
-  }, []);
-
   const canGenerate = configValid && !!image && !!base && !generating;
 
   const handleGenerate = useCallback(async () => {
@@ -248,10 +200,20 @@ export default function Home() {
 
   const total = layout?.totalCoupons ?? 0;
 
+  const stats =
+    image && total > 0 ? (
+      <p className="mt-0.5 font-mono text-[11px] text-ink-soft">
+        {total.toLocaleString()} coupons · {layout?.totalPages.toLocaleString()} page
+        {layout && layout.totalPages === 1 ? "" : "s"} · {firstCode(config)}–{lastCode(config)}
+      </p>
+    ) : (
+      <p className="mt-0.5 font-mono text-[11px] text-ink-faint">Upload an image to begin</p>
+    );
+
   return (
-    <div className="mx-auto min-h-full max-w-6xl px-4 pb-28 sm:px-6 lg:pb-12">
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col px-4 pb-28 sm:px-6 lg:h-screen lg:overflow-hidden lg:pb-0">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-line py-5">
+      <header className="flex shrink-0 items-center justify-between border-b border-line py-4">
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-ink text-paper">
             <ScrollText className="h-5 w-5" />
@@ -261,7 +223,7 @@ export default function Home() {
               Coupon Press
             </h1>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-faint">
-              Generate printable coupon books from any image and numbering pattern.
+              Printable coupon books, generated in your browser.
             </p>
           </div>
         </div>
@@ -275,15 +237,9 @@ export default function Home() {
         </a>
       </header>
 
-      <main className="grid grid-cols-1 gap-6 py-7 lg:grid-cols-12">
-        {/* Settings */}
-        <section className="space-y-5 lg:col-span-5 lg:col-start-1">
-          <PresetBar
-            presets={presets}
-            onApply={onApplyPreset}
-            onSave={onSavePreset}
-            onDelete={onDeletePreset}
-          />
+      <main className="grid grid-cols-1 gap-6 py-6 lg:min-h-0 lg:flex-1 lg:grid-cols-3 lg:gap-8 lg:py-5 lg:[grid-template-rows:minmax(0,1fr)]">
+        {/* Options — two of the three columns; scrolls internally on desktop */}
+        <section className="lg:col-span-2 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-2">
           <SettingsPanel
             config={config}
             onChange={onChange}
@@ -299,30 +255,20 @@ export default function Home() {
           />
         </section>
 
-        {/* Preview */}
-        <section className="lg:col-span-7">
-          <div className="space-y-5 lg:sticky lg:top-6">
-            <div className="flex flex-wrap items-end justify-between gap-3">
+        {/* Preview — one column: generation summary, generate button, page preview */}
+        <section className="lg:col-span-1 lg:h-full lg:min-h-0">
+          <div className="flex h-full flex-col gap-3">
+            <div className="shrink-0 space-y-3">
               <div>
                 <h2 className="font-display text-sm font-bold tracking-tight text-ink">
                   Live preview
                 </h2>
-                {image && total > 0 ? (
-                  <p className="mt-0.5 font-mono text-[11px] text-ink-soft">
-                    {total.toLocaleString()} coupons · {layout?.totalPages.toLocaleString()} page
-                    {layout && layout.totalPages === 1 ? "" : "s"} · {firstCode(config)}–
-                    {lastCode(config)}
-                  </p>
-                ) : (
-                  <p className="mt-0.5 font-mono text-[11px] text-ink-faint">
-                    Upload an image to begin
-                  </p>
-                )}
+                {stats}
               </div>
               <Button
                 variant="stamp"
                 size="md"
-                className="hidden lg:inline-flex"
+                className="hidden w-full lg:inline-flex"
                 disabled={!canGenerate}
                 onClick={handleGenerate}
               >
@@ -335,32 +281,23 @@ export default function Home() {
               </Button>
             </div>
 
-            {image && base && previewCode ? (
-              <div className="animate-fade-up space-y-5">
-                <div>
-                  <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-faint">
-                    Single coupon · {previewCode}
-                  </p>
-                  <CouponPreview
+            {image && base ? (
+              <div className="flex min-h-0 flex-1 animate-fade-up flex-col gap-2">
+                <p className="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-faint">
+                  Page 1 · A4
+                </p>
+                <div className="perforated flex min-h-0 flex-1 items-center justify-center rounded-lg p-2">
+                  <PagePreview
                     base={base}
-                    code={previewCode}
                     config={config}
-                    onPositionChange={(posX, posY) =>
-                      setConfig((prev) => ({ ...prev, posX, posY }))
-                    }
+                    className="max-h-full w-full lg:h-full lg:w-auto"
                   />
-                </div>
-                <div>
-                  <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-faint">
-                    Page 1 · A4
-                  </p>
-                  <div className="perforated rounded-lg p-3">
-                    <PagePreview base={base} config={config} />
-                  </div>
                 </div>
               </div>
             ) : (
-              <EmptyPreview />
+              <div className="flex min-h-0 flex-1">
+                <EmptyPreview />
+              </div>
             )}
           </div>
         </section>
@@ -397,7 +334,7 @@ export default function Home() {
 
 function EmptyPreview() {
   return (
-    <div className="grid place-items-center rounded-xl border border-dashed border-line-strong bg-card/60 px-6 py-20 text-center">
+    <div className="grid w-full place-items-center rounded-xl border border-dashed border-line-strong bg-card/60 p-8 text-center">
       <div className="max-w-xs space-y-2">
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-paper-deep text-ink-faint">
           <ScrollText className="h-6 w-6" />
