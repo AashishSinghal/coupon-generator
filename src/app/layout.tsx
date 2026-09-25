@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -30,7 +31,11 @@ export default function RootLayout({
       lang="en"
       className={`${bricolage.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        {/* Vercel Web Analytics; enable it in the project's Vercel dashboard */}
+        <Analytics />
+      </body>
     </html>
   );
 }

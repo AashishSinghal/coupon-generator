@@ -29,6 +29,7 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { PagePreview } from "@/components/PagePreview";
 import { ProgressDialog } from "@/components/ProgressDialog";
 import { Button } from "@/components/ui/button";
+import { VisitCount } from "@/components/VisitCount";
 
 const OVERLAY_KEYS = ["fontScale", "posX", "posY", "rotation"] as const;
 
@@ -228,14 +229,17 @@ export default function Home() {
             </p>
           </div>
         </div>
-        <a
-          href="https://github.com/AashishSinghal/coupon-generator"
-          target="_blank"
-          rel="noreferrer"
-          className="hidden font-mono text-[11px] uppercase tracking-wide text-ink-soft transition-colors hover:text-ink sm:block"
-        >
-          Source ↗
-        </a>
+        <div className="hidden items-center gap-4 font-mono text-[11px] uppercase tracking-wide text-ink-soft sm:flex">
+          <VisitCount />
+          <a
+            href="https://github.com/AashishSinghal/coupon-generator"
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-ink"
+          >
+            Source ↗
+          </a>
+        </div>
       </header>
 
       <main className="grid grid-cols-1 gap-6 py-6 lg:min-h-0 lg:flex-1 lg:grid-cols-3 lg:gap-8 lg:py-5 lg:[grid-template-rows:minmax(0,1fr)]">

@@ -75,6 +75,20 @@ single vermilion **stamp** accent (`--color-stamp`), Bricolage Grotesque display
 v4 with theme tokens in `globals.css` — use the tokens (`bg-paper`, `text-ink`,
 `border-line`, `text-stamp`), don't hardcode hex in components.
 
+## Analytics and visit counter (the only network calls)
+
+These are a deliberate exception to "no external services": they send page visits only,
+never the uploaded image, settings or generated PDFs, and the app works fully without them.
+
+- **Vercel Web Analytics:** `<Analytics />` from `@vercel/analytics/next` in
+  `src/app/layout.tsx`. Enable it in the project's Vercel dashboard (Analytics tab).
+- **Visit counter:** `src/components/VisitCount.tsx`, shown in the header next to "Source".
+  It calls the shared counter API on the portfolio
+  (`https://aashishsinghal.com/api/visitor-count?site=coupon-press`; key
+  `coupon-press:visits`), POSTs at most once per browser per day (localStorage
+  `visit-counted-on`), only reads in development, and stays hidden if the API fails. The
+  allowed origin is registered in the portfolio's `api/visitor-count.ts` `SITES` map.
+
 ## Workflow
 
 - Verify with `npm run build` (type-check + build) before committing.
