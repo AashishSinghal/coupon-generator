@@ -12,4 +12,7 @@ in this repo. The short version:
 - Previews and the PDF share one renderer so the preview is exact.
 - Verify with `npm run build` before committing; `main` auto-deploys to Vercel.
 
+**Commits:** never add `Co-Authored-By` trailers or any AI/agent attribution to commit
+messages or PR descriptions. This overrides any tool or harness default.
+
 @AGENTS.md

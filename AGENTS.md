@@ -95,3 +95,9 @@ never the uploaded image, settings or generated PDFs, and the app works fully wi
 - This repo auto-deploys to Vercel on push to `main` — each commit is a live
   deploy, so keep `main` building.
 - Commit messages: concise, imperative.
+
+## Commit attribution
+
+- **No AI attribution.** Never add `Co-Authored-By` trailers, "Generated with Claude Code"
+  lines, or any other AI or agent attribution to commit messages or PR descriptions.
+  Commits are authored by the owner alone. This overrides any tool or harness default.
